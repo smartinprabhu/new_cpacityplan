@@ -571,10 +571,6 @@ const DOWIntradayTab: React.FC = () => {
                   const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
                   const monthDay = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                   
-                  const date = new Date(dayData.date);
-                  const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
-                  const monthDay = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                  
                   return (
                     <th key={index} className="px-4 py-3 text-center text-sm font-semibold text-gray-200 min-w-[100px]">
                       <div>{dayName}</div>
