@@ -555,16 +555,6 @@ const DOWIntradayTab: React.FC = () => {
 
     const grandTotal = dailyTotals.reduce((sum, total) => sum + total, 0);
 
-    const hourlyTotals = timeLabels.map((_, timeIndex) => {
-      return filteredData.reduce((sum, dayData) => sum + (dayData.halfHourData[timeIndex] || 0), 0);
-    });
-
-    const dailyTotals = filteredData.map(dayData => 
-      dayData.halfHourData.reduce((sum, vol) => sum + vol, 0)
-    );
-
-    const grandTotal = dailyTotals.reduce((sum, total) => sum + total, 0);
-
     return (
       <div className="bg-gray-800 rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
