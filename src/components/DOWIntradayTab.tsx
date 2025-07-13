@@ -432,7 +432,6 @@ const DOWIntradayTab: React.FC = () => {
       const totalVolume = dayData.halfHourData.reduce((sum, vol) => sum + vol, 0);
       dowData[dayData.dow].total += totalVolume;
       dowData[dayData.dow].days += 1;
-      dowData[dayData.dow].days += 1;
     });
 
     const grandTotal = Object.values(dowData).reduce((sum, data) => sum + data.total, 0);
@@ -453,12 +452,8 @@ const DOWIntradayTab: React.FC = () => {
                 <th className="px-6 py-4 text-right text-sm font-semibold text-gray-200">
                   Avg per Day
                 </th>
-                <th className="px-6 py-4 text-right text-sm font-semibold text-gray-200">
-                  Avg per Day
-                </th>
                 <th className="px-6 py-4 text-right text-sm font-semibold text-gray-200 sticky right-0 bg-gray-700 z-30">
                   <div>Total & %</div>
-                  <div className="text-xs text-gray-400 font-normal">Avg & %</div>
                   <div className="text-xs text-gray-400 font-normal">Avg & %</div>
                 </th>
               </tr>
@@ -483,15 +478,9 @@ const DOWIntradayTab: React.FC = () => {
                     <td className="px-6 py-4 text-sm text-gray-300 text-right">
                       {Math.round(avgPerDay).toLocaleString()}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-300 text-right">
-                      {Math.round(avgPerDay).toLocaleString()}
-                    </td>
                     <td className="px-6 py-4 text-sm text-right sticky right-0 bg-inherit z-20">
                       <div className="text-white font-medium">
                         {data.total.toLocaleString()} ({percentage.toFixed(1)}%)
-                      </div>
-                      <div className="text-gray-400 text-xs">
-                        {Math.round(avgPerDay).toLocaleString()} ({avgPercentage.toFixed(1)}%)
                       </div>
                       <div className="text-gray-400 text-xs">
                         {Math.round(avgPerDay).toLocaleString()} ({avgPercentage.toFixed(1)}%)
@@ -510,14 +499,8 @@ const DOWIntradayTab: React.FC = () => {
                 <td className="px-6 py-4 text-sm font-bold text-white text-right">
                   {Math.round(grandTotal / Object.keys(dowData).length).toLocaleString()}
                 </td>
-                <td className="px-6 py-4 text-sm font-bold text-white text-right">
-                  {Math.round(grandTotal / Object.keys(dowData).length).toLocaleString()}
-                </td>
                 <td className="px-6 py-4 text-sm font-bold text-white text-right sticky right-0 bg-blue-900 z-20">
                   <div>{grandTotal.toLocaleString()} (100.0%)</div>
-                  <div className="text-blue-200 text-xs">
-                    {Math.round(grandTotal / Object.keys(dowData).length).toLocaleString()} (100.0%)
-                  </div>
                   <div className="text-blue-200 text-xs">
                     {Math.round(grandTotal / Object.keys(dowData).length).toLocaleString()} (100.0%)
                   </div>
@@ -564,7 +547,6 @@ const DOWIntradayTab: React.FC = () => {
                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-200 sticky left-0 bg-gray-700 z-20">
                   <div>Time</div>
                   <div>Interval</div>
-                  <div>Interval</div>
                 </th>
                 {filteredData.map((dayData, index) => {
                   const date = new Date(dayData.date);
@@ -575,14 +557,9 @@ const DOWIntradayTab: React.FC = () => {
                     <th key={index} className="px-4 py-3 text-center text-sm font-semibold text-gray-200 min-w-[100px]">
                       <div>{dayName}</div>
                       <div>{monthDay}</div>
-                      <div>{monthDay}</div>
                     </th>
                   );
                 })}
-                <th className="px-4 py-3 text-center text-sm font-semibold text-gray-200 sticky right-0 bg-gray-700 z-30 min-w-[120px]">
-                  <div>Hourly Total</div>
-                  <div className="text-xs text-gray-400 font-normal">Sum & %</div>
-                </th>
                 <th className="px-4 py-3 text-center text-sm font-semibold text-gray-200 sticky right-0 bg-gray-700 z-30 min-w-[120px]">
                   <div>Hourly Total</div>
                   <div className="text-xs text-gray-400 font-normal">Sum & %</div>
@@ -608,32 +585,8 @@ const DOWIntradayTab: React.FC = () => {
                       ({grandTotal > 0 ? ((hourlyTotals[timeIndex] / grandTotal) * 100).toFixed(1) : '0.0'}%)
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-sm text-center sticky right-0 bg-inherit z-20">
-                    <div className="text-white font-medium">
-                      {hourlyTotals[timeIndex].toLocaleString()}
-                    </div>
-                    <div className="text-gray-400 text-xs">
-                      ({grandTotal > 0 ? ((hourlyTotals[timeIndex] / grandTotal) * 100).toFixed(1) : '0.0'}%)
-                    </div>
-                  </td>
                 </tr>
               ))}
-              <tr className="bg-blue-900 border-t-2 border-blue-600">
-                <td className="px-4 py-3 text-sm font-bold text-white sticky left-0 bg-blue-900 z-10">
-                  <div>Daily</div>
-                  <div>Total</div>
-                </td>
-                {dailyTotals.map((total, index) => (
-                  <td key={index} className="px-4 py-3 text-sm font-bold text-white text-center">
-                    <div>{total.toLocaleString()}</div>
-                    <div className="text-blue-200 text-xs">(100.0%)</div>
-                  </td>
-                ))}
-                <td className="px-4 py-3 text-sm font-bold text-white text-center sticky right-0 bg-blue-900 z-20">
-                  <div>{grandTotal.toLocaleString()}</div>
-                  <div className="text-blue-200 text-xs">(100.0%)</div>
-                </td>
-              </tr>
               <tr className="bg-blue-900 border-t-2 border-blue-600">
                 <td className="px-4 py-3 text-sm font-bold text-white sticky left-0 bg-blue-900 z-10">
                   <div>Daily</div>
