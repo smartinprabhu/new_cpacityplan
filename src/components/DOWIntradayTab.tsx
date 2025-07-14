@@ -16,6 +16,11 @@ interface Filters {
     end: string;
   };
   selectedDOW: string;
+  aggregationType: 'daily' | 'monthly' | 'yearly';
+  dailyFilters: string[];
+  monthlyFilters: string[];
+  yearlyFilters: number[];
+  intradayFilters: { start: number; end: number };
 }
 
 const DOWIntradayTab: React.FC = () => {
@@ -30,7 +35,12 @@ const DOWIntradayTab: React.FC = () => {
       start: '2024-01-28',
       end: '2024-03-18'
     },
-    selectedDOW: ''
+    selectedDOW: '',
+    aggregationType: 'daily',
+    dailyFilters: [],
+    monthlyFilters: [],
+    yearlyFilters: [],
+    intradayFilters: { start: 0, end: 24 },
   });
 
   // Business Units - POS is the main BU
@@ -80,7 +90,7 @@ const DOWIntradayTab: React.FC = () => {
 
   // Generate mock intraday data for the date range
   const generateIntradayData = useMemo(() => {
-    const data: IntradayData[] = [];
+    let data: IntradayData[] = [];
     
     datesInRange.forEach(({ date, dayOfWeek }) => {
       const halfHourData = Array.from({ length: 48 }, (_, index) => {
@@ -105,9 +115,39 @@ const DOWIntradayTab: React.FC = () => {
         halfHourData
       });
     });
+
+    // Apply aggregation filters
+    if (analysisType === 'intraday') {
+      if (filters.aggregationType === 'daily' && filters.dailyFilters.length > 0) {
+        data = data.filter(item => filters.dailyFilters.includes(item.dow));
+      }
+      if (filters.aggregationType === 'monthly' && filters.monthlyFilters.length > 0) {
+        data = data.filter(item => {
+          const month = new Date(item.date).toLocaleString('en-US', { month: 'long' });
+          return filters.monthlyFilters.includes(month);
+        });
+      }
+      if (filters.aggregationType === 'yearly' && filters.yearlyFilters.length > 0) {
+        data = data.filter(item => {
+          const year = new Date(item.date).getFullYear();
+          return filters.yearlyFilters.includes(year);
+        });
+      }
+
+      data = data.map(item => {
+        const halfHourData = item.halfHourData.map((volume, index) => {
+          const hour = Math.floor(index / 2);
+          if (hour >= filters.intradayFilters.start && hour < filters.intradayFilters.end) {
+            return volume;
+          }
+          return 0;
+        });
+        return { ...item, halfHourData };
+      });
+    }
     
     return data;
-  }, [datesInRange, filters.lineOfBusiness]);
+  }, [datesInRange, filters]);
 
   // Calculate DOW averages
   const dowAverages = useMemo(() => {
@@ -566,7 +606,7 @@ const DOWIntradayTab: React.FC = () => {
       return 0;
     });
 
-    const maxVolume = Math.max(...chartData.map(d => d.volume));
+    const maxVolume = Math.max(...chartData.map(d => d.value));
     const minVolume = Math.min(...chartData.map(d => d.value));
 
     const renderChart = () => {
@@ -583,29 +623,30 @@ const DOWIntradayTab: React.FC = () => {
           return (
             <div className="relative h-96 bg-slate-800 rounded p-4 overflow-x-auto">
               <svg width="100%" height="100%" viewBox={`0 0 ${Math.max(800, chartData.length * 20)} 350`} className="min-w-full">
-                {/* Grid lines */}
-                {[0, 0.25, 0.5, 0.75, 1].map((ratio, index) => (
-                  <g key={index}>
-                    <line
-                      x1="60"
-                      y1={50 + ratio * 250}
-                      x2={Math.max(800, chartData.length * 20) - 40}
-                      y2={50 + ratio * 250}
-                      stroke="#475569"
-                      strokeWidth="1"
-                      strokeDasharray="2,2"
-                    />
-                    <text
-                      x="50"
-                      y={55 + ratio * 250}
-                      fill="#94a3b8"
-                      fontSize="12"
-                      textAnchor="end"
-                    >
-                      {Math.round(maxVolume * (1 - ratio)).toLocaleString()}
-                    </text>
-                  </g>
-                ))}
+                {/* Y-axis */}
+                <g className="text-gray-400 text-xs">
+                  {[0, 0.25, 0.5, 0.75, 1].map((ratio) => (
+                    <g key={ratio}>
+                      <line
+                        x1="50"
+                        y1={50 + (1 - ratio) * 250}
+                        x2={Math.max(800, chartData.length * 20) - 20}
+                        y2={50 + (1 - ratio) * 250}
+                        stroke="#475569"
+                        strokeWidth="1"
+                        strokeDasharray="2,2"
+                      />
+                      <text
+                        x="45"
+                        y={55 + (1 - ratio) * 250}
+                        fill="#94a3b8"
+                        textAnchor="end"
+                      >
+                        {Math.round(maxVolume * ratio).toLocaleString()}
+                      </text>
+                    </g>
+                  ))}
+                </g>
                 
                 {/* Line path */}
                 <path
@@ -645,29 +686,30 @@ const DOWIntradayTab: React.FC = () => {
           return (
             <div className="relative h-96 bg-slate-800 rounded p-4 overflow-x-auto">
               <svg width="100%" height="100%" viewBox={`0 0 ${Math.max(800, chartData.length * 20)} 350`} className="min-w-full">
-                {/* Grid lines */}
-                {[0, 0.25, 0.5, 0.75, 1].map((ratio, index) => (
-                  <g key={index}>
-                    <line
-                      x1="60"
-                      y1={50 + ratio * 250}
-                      x2={Math.max(800, chartData.length * 20) - 40}
-                      y2={50 + ratio * 250}
-                      stroke="#475569"
-                      strokeWidth="1"
-                      strokeDasharray="2,2"
-                    />
-                    <text
-                      x="50"
-                      y={55 + ratio * 250}
-                      fill="#94a3b8"
-                      fontSize="12"
-                      textAnchor="end"
-                    >
-                      {Math.round(maxVolume * (1 - ratio)).toLocaleString()}
-                    </text>
-                  </g>
-                ))}
+                {/* Y-axis */}
+                <g className="text-gray-400 text-xs">
+                  {[0, 0.25, 0.5, 0.75, 1].map((ratio) => (
+                    <g key={ratio}>
+                      <line
+                        x1="50"
+                        y1={50 + (1 - ratio) * 250}
+                        x2={Math.max(800, chartData.length * 20) - 20}
+                        y2={50 + (1 - ratio) * 250}
+                        stroke="#475569"
+                        strokeWidth="1"
+                        strokeDasharray="2,2"
+                      />
+                      <text
+                        x="45"
+                        y={55 + (1 - ratio) * 250}
+                        fill="#94a3b8"
+                        textAnchor="end"
+                      >
+                        {Math.round(maxVolume * ratio).toLocaleString()}
+                      </text>
+                    </g>
+                  ))}
+                </g>
                 
                 {/* Area path */}
                 <path
@@ -798,7 +840,9 @@ const DOWIntradayTab: React.FC = () => {
         </div>
         
         {/* Chart Container */}
-        {renderChart()}
+        <div className="bg-slate-800 p-4 rounded-lg">
+          {renderChart()}
+        </div>
         
         {/* Chart Summary */}
         <div className="mt-4 flex items-center justify-between text-sm text-gray-400">
@@ -827,13 +871,18 @@ const DOWIntradayTab: React.FC = () => {
               {/* Analysis Type Toggle */}
               <div className="flex items-center bg-slate-700 rounded-lg p-1">
                 <button
-                  onClick={() => setAnalysisType('dow')}
+                  onClick={() => {
+                    setAnalysisType('dow');
+                  }}
                   className={`px-3 py-1 text-sm rounded ${analysisType === 'dow' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}
                 >
                   DOW
                 </button>
                 <button
-                  onClick={() => setAnalysisType('intraday')}
+                  onClick={() => {
+                    setAnalysisType('intraday');
+                    setAggregationType('halfhour');
+                  }}
                   className={`px-3 py-1 text-sm rounded ${analysisType === 'intraday' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}
                 >
                   Intraday
@@ -928,8 +977,8 @@ const DOWIntradayTab: React.FC = () => {
               <button
                 onClick={() => handleFilterChange('selectedDOW', '')}
                 className={`px-3 py-1 text-xs rounded transition-colors ${
-                  filters.selectedDOW === '' 
-                    ? 'bg-blue-600 text-white' 
+                  filters.selectedDOW === ''
+                    ? 'bg-blue-600 text-white'
                     : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
                 }`}
               >
@@ -940,8 +989,8 @@ const DOWIntradayTab: React.FC = () => {
                   key={day}
                   onClick={() => handleFilterChange('selectedDOW', day)}
                   className={`px-3 py-1 text-xs rounded transition-colors ${
-                    filters.selectedDOW === day 
-                      ? 'bg-blue-600 text-white' 
+                    filters.selectedDOW === day
+                      ? 'bg-blue-600 text-white'
                       : 'bg-slate-700 text-gray-300 hover:bg-slate-600'
                   }`}
                 >
@@ -952,6 +1001,107 @@ const DOWIntradayTab: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Aggregation Filters */}
+      {analysisType === 'intraday' && (
+        <div className="px-6 py-4 bg-slate-850 border-b border-slate-700">
+          <div className="flex items-center space-x-4">
+            <label className="text-sm text-gray-300 font-medium">Aggregation:</label>
+            <select
+              value={filters.aggregationType}
+              onChange={(e) => handleFilterChange('aggregationType', e.target.value)}
+              className="bg-slate-700 border border-slate-600 rounded px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="daily">Daily</option>
+              <option value="monthly">Monthly</option>
+              <option value="yearly">Yearly</option>
+            </select>
+
+            {filters.aggregationType === 'daily' && (
+              <div className="flex items-center space-x-2">
+                {daysOfWeek.map(day => (
+                  <label key={day} className="flex items-center space-x-1 text-sm text-gray-300">
+                    <input
+                      type="checkbox"
+                      checked={filters.dailyFilters.includes(day)}
+                      onChange={() => {
+                        const newFilters = filters.dailyFilters.includes(day)
+                          ? filters.dailyFilters.filter(d => d !== day)
+                          : [...filters.dailyFilters, day];
+                        handleFilterChange('dailyFilters', newFilters);
+                      }}
+                      className="form-checkbox h-4 w-4 bg-slate-600 border-slate-500 text-blue-500 focus:ring-blue-500"
+                    />
+                    <span>{day.slice(0, 3)}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+
+            {filters.aggregationType === 'monthly' && (
+              <div className="flex items-center space-x-2">
+                {Array.from({ length: 12 }, (_, i) => new Date(0, i).toLocaleString('en-US', { month: 'long' })).map(month => (
+                  <label key={month} className="flex items-center space-x-1 text-sm text-gray-300">
+                    <input
+                      type="checkbox"
+                      checked={filters.monthlyFilters.includes(month)}
+                      onChange={() => {
+                        const newFilters = filters.monthlyFilters.includes(month)
+                          ? filters.monthlyFilters.filter(m => m !== month)
+                          : [...filters.monthlyFilters, month];
+                        handleFilterChange('monthlyFilters', newFilters);
+                      }}
+                      className="form-checkbox h-4 w-4 bg-slate-600 border-slate-500 text-blue-500 focus:ring-blue-500"
+                    />
+                    <span>{month.slice(0, 3)}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+
+            {filters.aggregationType === 'yearly' && (
+              <div className="flex items-center space-x-2">
+                <select
+                  value={filters.yearlyFilters[0] || ''}
+                  onChange={(e) => handleFilterChange('yearlyFilters', [parseInt(e.target.value)])}
+                  className="bg-slate-700 border border-slate-600 rounded px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {/* Populate with available years from data */}
+                  {Array.from(new Set(datesInRange.map(d => new Date(d.date).getFullYear()))).map(year => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
+          {analysisType === 'intraday' && (
+            <div className="mt-4 flex items-center space-x-4">
+              <label className="text-sm text-gray-300 font-medium">Filter Hours:</label>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="range"
+                  min="0"
+                  max="24"
+                  value={filters.intradayFilters.start}
+                  onChange={(e) => handleFilterChange('intradayFilters', { ...filters.intradayFilters, start: parseInt(e.target.value) })}
+                  className="w-32"
+                />
+                <span>{filters.intradayFilters.start}:00</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="24"
+                  value={filters.intradayFilters.end}
+                  onChange={(e) => handleFilterChange('intradayFilters', { ...filters.intradayFilters, end: parseInt(e.target.value) })}
+                  className="w-32"
+                />
+                <span>{filters.intradayFilters.end}:00</span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="p-6">
