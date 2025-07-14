@@ -430,6 +430,21 @@ const DOWIntradayTab: React.FC = () => {
       ? dowAverages.filter(item => item.dow === filters.selectedDOW)
       : dowAverages;
 
+    // Check if data is empty to prevent Recharts errors
+    if (!dataToShow || dataToShow.length === 0) {
+      return (
+        <div className="bg-slate-700 rounded-lg p-6">
+          <div className="flex items-center justify-center h-96 text-gray-400">
+            <div className="text-center">
+              <BarChart3 className="w-16 h-16 mx-auto mb-4 text-gray-500" />
+              <p className="text-lg">No data available for the selected filters</p>
+              <p className="text-sm mt-2">Try adjusting your date range or filters</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="bg-slate-700 rounded-lg p-6">
         <div className="mb-6">
