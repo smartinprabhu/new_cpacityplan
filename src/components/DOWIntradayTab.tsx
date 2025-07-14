@@ -1,5 +1,3 @@
-Here's the fixed script with all missing closing brackets added:
-
 import React, { useState, useMemo } from 'react';
 import { Calendar, BarChart3, Table, Download } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, BarChart, Bar, Label } from 'recharts';
