@@ -610,8 +610,6 @@ const DOWIntradayTab: React.FC = () => {
     const maxVolume = Math.max(...chartData.map(d => d.value));
     const minVolume = Math.min(...chartData.map(d => d.value));
 
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, BarChart, Bar } from 'recharts';
-
     const renderChart = () => {
       if (chartData.length === 0) {
         return (
