@@ -421,37 +421,6 @@ const DOWIntradayTab: React.FC = () => {
           </p>
         </div>
         <ResponsiveContainer width="100%" height={400}>
-          <BarChart data={dataToShow}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
-            <XAxis dataKey="dow" stroke="#94a3b8" label={{ value: 'Day of the Week', position: 'insideBottom', offset: -5, fill: '#94a3b8' }} />
-            <YAxis stroke="#94a3b8" label={{ value: 'Volume', angle: -90, position: 'insideLeft', textAnchor: 'middle', fill: '#94a3b8' }} />
-            <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569' }} labelStyle={{ color: '#cbd5e1' }} />
-            <Legend wrapperStyle={{ color: '#cbd5e1' }} />
-            <Bar dataKey="avgTotalVolume" fill="#3b82f6" name="Average Volume" />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-    );
-  };
-
-  // Render Intraday Chart View
-  const renderIntradayChartView = () => {
-    const filteredData = generateIntradayData.filter((item) => !filters.selectedDOW || item.dow === filters.selectedDOW);
-    let chartData: { label: string; value: number; date?: string }[] = [];
-    // Calculate chart width based on aggregation type and data length
-    const getChartWidth = () => {
-      const baseWidth = {
-        'half-hour': 30,
-        'hourly': 40,
-        'daily': 60,
-        'weekly': 100,
-        'monthly': 150
-      };
-      
-      const width = chartData.length * (baseWidth[aggregationType] || 30);
-      return Math.max(1200, Math.min(3000, width));
-    };
-    
     const chartWidth = getChartWidth();
     
     let xAxisLabel = '';
