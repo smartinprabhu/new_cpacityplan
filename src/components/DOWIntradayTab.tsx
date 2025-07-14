@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Calendar, BarChart3, Table, Download } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, BarChart, Bar, Label } from 'recharts';
 
 interface IntradayData {
   lob: string;
@@ -37,9 +38,9 @@ const DOWIntradayTab: React.FC = () => {
     },
     selectedDOW: '',
     aggregationType: 'daily',
-    dailyFilters: [],
-    monthlyFilters: [],
-    yearlyFilters: [],
+    dailyFilters: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+    monthlyFilters: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+    yearlyFilters: [new Date().getFullYear()],
     intradayFilters: { start: 0, end: 24 },
   });
 
@@ -609,6 +610,8 @@ const DOWIntradayTab: React.FC = () => {
     const maxVolume = Math.max(...chartData.map(d => d.value));
     const minVolume = Math.min(...chartData.map(d => d.value));
 
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area, BarChart, Bar } from 'recharts';
+
     const renderChart = () => {
       if (chartData.length === 0) {
         return (
@@ -618,173 +621,67 @@ const DOWIntradayTab: React.FC = () => {
         );
       }
 
-      switch (chartType) {
-        case 'line':
-          return (
-            <div className="relative h-96 bg-slate-800 rounded p-4 overflow-x-auto">
-              <svg width="100%" height="100%" viewBox={`0 0 ${Math.max(800, chartData.length * 20)} 350`} className="min-w-full">
-                {/* Y-axis */}
-                <g className="text-gray-400 text-xs">
-                  {[0, 0.25, 0.5, 0.75, 1].map((ratio) => (
-                    <g key={ratio}>
-                      <line
-                        x1="50"
-                        y1={50 + (1 - ratio) * 250}
-                        x2={Math.max(800, chartData.length * 20) - 20}
-                        y2={50 + (1 - ratio) * 250}
-                        stroke="#475569"
-                        strokeWidth="1"
-                        strokeDasharray="2,2"
-                      />
-                      <text
-                        x="45"
-                        y={55 + (1 - ratio) * 250}
-                        fill="#94a3b8"
-                        textAnchor="end"
-                      >
-                        {Math.round(maxVolume * ratio).toLocaleString()}
-                      </text>
-                    </g>
-                  ))}
-                </g>
-                
-                {/* Line path */}
-                <path
-                  d={chartData.map((item, index) => {
-                    const x = 60 + (index * (Math.max(800, chartData.length * 20) - 100)) / (chartData.length - 1);
-                    const y = 50 + (1 - item.value / maxVolume) * 250;
-                    return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
-                  }).join(' ')}
-                  fill="none"
-                  stroke="#3b82f6"
-                  strokeWidth="2"
-                />
-                
-                {/* Data points */}
-                {chartData.map((item, index) => {
-                  const x = 60 + (index * (Math.max(800, chartData.length * 20) - 100)) / (chartData.length - 1);
-                  const y = 50 + (1 - item.value / maxVolume) * 250;
-                  
-                  return (
-                    <g key={index}>
-                      <circle
-                        cx={x}
-                        cy={y}
-                        r="4"
-                        fill="#3b82f6"
-                        className="hover:r-6 cursor-pointer"
-                      />
-                      <title>{`${item.label}: ${item.value.toLocaleString()}`}</title>
-                    </g>
-                  );
-                })}
-              </svg>
-            </div>
-          );
-
-        case 'area':
-          return (
-            <div className="relative h-96 bg-slate-800 rounded p-4 overflow-x-auto">
-              <svg width="100%" height="100%" viewBox={`0 0 ${Math.max(800, chartData.length * 20)} 350`} className="min-w-full">
-                {/* Y-axis */}
-                <g className="text-gray-400 text-xs">
-                  {[0, 0.25, 0.5, 0.75, 1].map((ratio) => (
-                    <g key={ratio}>
-                      <line
-                        x1="50"
-                        y1={50 + (1 - ratio) * 250}
-                        x2={Math.max(800, chartData.length * 20) - 20}
-                        y2={50 + (1 - ratio) * 250}
-                        stroke="#475569"
-                        strokeWidth="1"
-                        strokeDasharray="2,2"
-                      />
-                      <text
-                        x="45"
-                        y={55 + (1 - ratio) * 250}
-                        fill="#94a3b8"
-                        textAnchor="end"
-                      >
-                        {Math.round(maxVolume * ratio).toLocaleString()}
-                      </text>
-                    </g>
-                  ))}
-                </g>
-                
-                {/* Area path */}
-                <path
-                  d={[
-                    `M 60 300`,
-                    ...chartData.map((item, index) => {
-                      const x = 60 + (index * (Math.max(800, chartData.length * 20) - 100)) / (chartData.length - 1);
-                      const y = 50 + (1 - item.value / maxVolume) * 250;
-                      return `L ${x} ${y}`;
-                    }),
-                    `L ${60 + (Math.max(800, chartData.length * 20) - 100)} 300`,
-                    'Z'
-                  ].join(' ')}
-                  fill="url(#areaGradient)"
-                  stroke="#3b82f6"
-                  strokeWidth="2"
-                />
-                
-                {/* Gradient definition */}
-                <defs>
-                  <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.3" />
-                    <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.05" />
-                  </linearGradient>
-                </defs>
-                
-                {/* Data points */}
-                {chartData.map((item, index) => {
-                  const x = 60 + (index * (Math.max(800, chartData.length * 20) - 100)) / (chartData.length - 1);
-                  const y = 50 + (1 - item.value / maxVolume) * 250;
-                  
-                  return (
-                    <g key={index}>
-                      <circle
-                        cx={x}
-                        cy={y}
-                        r="3"
-                        fill="#3b82f6"
-                        className="hover:r-5 cursor-pointer"
-                      />
-                      <title>{`${item.label}: ${item.value.toLocaleString()}`}</title>
-                    </g>
-                  );
-                })}
-              </svg>
-            </div>
-          );
-
-        case 'bar':
-        default:
-          return (
-            <div className="relative h-96 bg-slate-800 rounded p-4 overflow-x-auto">
-              <div className="flex items-end justify-start h-full space-x-1 min-w-full" style={{ width: `${Math.max(800, chartData.length * 40)}px` }}>
-                {chartData.map((item, index) => (
-                  <div key={index} className="flex flex-col items-center flex-shrink-0" style={{ width: '35px' }}>
-                    <div 
-                      className="bg-blue-500 rounded-t transition-all duration-300 hover:bg-blue-400 cursor-pointer w-full"
-                      style={{ 
-                        height: `${maxVolume > 0 ? (item.value / maxVolume) * 300 : 10}px`,
-                        minHeight: '2px'
-                      }}
-                      title={`${item.label}: ${item.value.toLocaleString()}`}
-                    />
-                    <div className="mt-2 text-xs text-gray-300 font-medium transform -rotate-45 origin-top-left whitespace-nowrap">
-                      {aggregationType === 'halfhour' || aggregationType === 'hourly' 
-                        ? item.label.split(' ').slice(-1)[0] // Show only time for half-hour/hourly
-                        : item.label
-                      }
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-      }
+      return (
+        <ResponsiveContainer width="100%" height={400}>
+          {chartType === 'line' && (
+            <LineChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
+              <XAxis dataKey="label" stroke="#94a3b8">
+                <Label value={xAxisLabel} offset={-5} position="insideBottom" fill="#94a3b8" />
+              </XAxis>
+              <YAxis stroke="#94a3b8">
+                <Label value={yAxisLabel} angle={-90} position="insideLeft" fill="#94a3b8" style={{ textAnchor: 'middle' }} />
+              </YAxis>
+              <Tooltip
+                contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569' }}
+                labelStyle={{ color: '#cbd5e1' }}
+              />
+              <Legend wrapperStyle={{ color: '#cbd5e1' }} />
+              <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} />
+            </LineChart>
+          )}
+          {chartType === 'area' && (
+            <AreaChart data={chartData}>
+              <defs>
+                <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
+                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
+              <XAxis dataKey="label" stroke="#94a3b8">
+                <Label value={xAxisLabel} offset={-5} position="insideBottom" fill="#94a3b8" />
+              </XAxis>
+              <YAxis stroke="#94a3b8">
+                <Label value={yAxisLabel} angle={-90} position="insideLeft" fill="#94a3b8" style={{ textAnchor: 'middle' }} />
+              </YAxis>
+              <Tooltip
+                contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569' }}
+                labelStyle={{ color: '#cbd5e1' }}
+              />
+              <Legend wrapperStyle={{ color: '#cbd5e1' }} />
+              <Area type="monotone" dataKey="value" stroke="#3b82f6" fillOpacity={1} fill="url(#areaGradient)" />
+            </AreaChart>
+          )}
+          {chartType === 'bar' && (
+            <BarChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
+              <XAxis dataKey="label" stroke="#94a3b8">
+                <Label value={xAxisLabel} offset={-5} position="insideBottom" fill="#94a3b8" />
+              </XAxis>
+              <YAxis stroke="#94a3b8">
+                <Label value={yAxisLabel} angle={-90} position="insideLeft" fill="#94a3b8" style={{ textAnchor: 'middle' }} />
+              </YAxis>
+              <Tooltip
+                contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569' }}
+                labelStyle={{ color: '#cbd5e1' }}
+              />
+              <Legend wrapperStyle={{ color: '#cbd5e1' }} />
+              <Bar dataKey="value" fill="#3b82f6" />
+            </BarChart>
+          )}
+        </ResponsiveContainer>
+      );
     };
     return (
       <div className="bg-slate-700 rounded-lg p-6">
