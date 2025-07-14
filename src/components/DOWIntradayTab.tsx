@@ -148,7 +148,7 @@ const DOWIntradayTab: React.FC = () => {
     }
     
     return data;
-  }, [datesInRange, filters]);
+  }, [datesInRange, filters, analysisType]);
 
   // Calculate DOW averages
   const dowAverages = useMemo(() => {
@@ -430,8 +430,6 @@ const DOWIntradayTab: React.FC = () => {
       ? dowAverages.filter(item => item.dow === filters.selectedDOW)
       : dowAverages;
 
-    const maxVolume = Math.max(...dataToShow.map(d => d.avgTotalVolume));
-
     return (
       <div className="bg-slate-700 rounded-lg p-6">
         <div className="mb-6">
@@ -441,26 +439,23 @@ const DOWIntradayTab: React.FC = () => {
           </p>
         </div>
         
-        <div className="flex items-end justify-between h-96 bg-slate-800 rounded p-4">
-          {dataToShow.map((item, index) => (
-            <div key={index} className="flex flex-col items-center flex-1 mx-1">
-              <div 
-                className="bg-blue-500 rounded-t w-full transition-all duration-300 hover:bg-blue-400 cursor-pointer"
-                style={{ 
-                  height: `${maxVolume > 0 ? (item.avgTotalVolume / maxVolume) * 300 : 10}px`,
-                  minHeight: '10px'
-                }}
-                title={`${item.dow}: ${item.avgTotalVolume.toLocaleString()} avg volume (${item.count} days)`}
-              />
-              <div className="mt-2 text-sm text-gray-300 font-medium">
-                {item.dow.slice(0, 3)}
-              </div>
-              <div className="text-xs text-gray-400">
-                {item.avgTotalVolume.toLocaleString()}
-              </div>
-            </div>
-          ))}
-        </div>
+        <ResponsiveContainer width="100%" height={400}>
+          <BarChart data={dataToShow}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
+            <XAxis dataKey="dow" stroke="#94a3b8">
+              <Label value="Day of the Week" offset={-5} position="insideBottom" fill="#94a3b8" />
+            </XAxis>
+            <YAxis stroke="#94a3b8">
+              <Label value="Volume" angle={-90} position="insideLeft" fill="#94a3b8" style={{ textAnchor: 'middle' }} />
+            </YAxis>
+            <Tooltip
+              contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569' }}
+              labelStyle={{ color: '#cbd5e1' }}
+            />
+            <Legend wrapperStyle={{ color: '#cbd5e1' }} />
+            <Bar dataKey="avgTotalVolume" fill="#3b82f6" name="Average Volume" />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
     );
   };
@@ -607,7 +602,6 @@ const DOWIntradayTab: React.FC = () => {
       return 0;
     });
 
-    const maxVolume = Math.max(...chartData.map(d => d.value));
     const minVolume = Math.min(...chartData.map(d => d.value));
 
     const renderChart = () => {
@@ -620,65 +614,61 @@ const DOWIntradayTab: React.FC = () => {
       }
 
       return (
-        <ResponsiveContainer width="100%" height={400}>
-          {chartType === 'line' && (
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
-              <XAxis dataKey="label" stroke="#94a3b8">
-                <Label value={xAxisLabel} offset={-5} position="insideBottom" fill="#94a3b8" />
-              </XAxis>
-              <YAxis stroke="#94a3b8">
-                <Label value={yAxisLabel} angle={-90} position="insideLeft" fill="#94a3b8" style={{ textAnchor: 'middle' }} />
-              </YAxis>
-              <Tooltip
-                contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569' }}
-                labelStyle={{ color: '#cbd5e1' }}
-              />
-              <Legend wrapperStyle={{ color: '#cbd5e1' }} />
-              <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} />
-            </LineChart>
-          )}
-          {chartType === 'area' && (
-            <AreaChart data={chartData}>
-              <defs>
-                <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
-              <XAxis dataKey="label" stroke="#94a3b8">
-                <Label value={xAxisLabel} offset={-5} position="insideBottom" fill="#94a3b8" />
-              </XAxis>
-              <YAxis stroke="#94a3b8">
-                <Label value={yAxisLabel} angle={-90} position="insideLeft" fill="#94a3b8" style={{ textAnchor: 'middle' }} />
-              </YAxis>
-              <Tooltip
-                contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569' }}
-                labelStyle={{ color: '#cbd5e1' }}
-              />
-              <Legend wrapperStyle={{ color: '#cbd5e1' }} />
-              <Area type="monotone" dataKey="value" stroke="#3b82f6" fillOpacity={1} fill="url(#areaGradient)" />
-            </AreaChart>
-          )}
-          {chartType === 'bar' && (
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
-              <XAxis dataKey="label" stroke="#94a3b8">
-                <Label value={xAxisLabel} offset={-5} position="insideBottom" fill="#94a3b8" />
-              </XAxis>
-              <YAxis stroke="#94a3b8">
-                <Label value={yAxisLabel} angle={-90} position="insideLeft" fill="#94a3b8" style={{ textAnchor: 'middle' }} />
-              </YAxis>
-              <Tooltip
-                contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569' }}
-                labelStyle={{ color: '#cbd5e1' }}
-              />
-              <Legend wrapperStyle={{ color: '#cbd5e1' }} />
-              <Bar dataKey="value" fill="#3b82f6" />
-            </BarChart>
-          )}
-        </ResponsiveContainer>
+        <div style={{ width: '100%', overflowX: 'auto', overflowY: 'hidden' }}>
+          <ResponsiveContainer width={Math.max(chartData.length * 50, 500)} height={400}>
+            {chartType === 'line' && (
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
+                <XAxis dataKey="label" stroke="#94a3b8" interval={0} angle={-45} textAnchor="end" height={100} />
+                <YAxis stroke="#94a3b8" yAxisId="left" orientation="left">
+                  <Label value={yAxisLabel} angle={-90} position="insideLeft" fill="#94a3b8" style={{ textAnchor: 'middle' }} />
+                </YAxis>
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569' }}
+                  labelStyle={{ color: '#cbd5e1' }}
+                />
+                <Legend wrapperStyle={{ color: '#cbd5e1' }} />
+                <Line yAxisId="left" type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} />
+              </LineChart>
+            )}
+            {chartType === 'area' && (
+              <AreaChart data={chartData}>
+                <defs>
+                  <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
+                <XAxis dataKey="label" stroke="#94a3b8" interval={0} angle={-45} textAnchor="end" height={100} />
+                <YAxis stroke="#94a3b8" yAxisId="left" orientation="left">
+                  <Label value={yAxisLabel} angle={-90} position="insideLeft" fill="#94a3b8" style={{ textAnchor: 'middle' }} />
+                </YAxis>
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569' }}
+                  labelStyle={{ color: '#cbd5e1' }}
+                />
+                <Legend wrapperStyle={{ color: '#cbd5e1' }} />
+                <Area yAxisId="left" type="monotone" dataKey="value" stroke="#3b82f6" fillOpacity={1} fill="url(#areaGradient)" />
+              </AreaChart>
+            )}
+            {chartType === 'bar' && (
+              <BarChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
+                <XAxis dataKey="label" stroke="#94a3b8" interval={0} angle={-45} textAnchor="end" height={100} />
+                <YAxis stroke="#94a3b8" yAxisId="left" orientation="left">
+                  <Label value={yAxisLabel} angle={-90} position="insideLeft" fill="#94a3b8" style={{ textAnchor: 'middle' }} />
+                </YAxis>
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569' }}
+                  labelStyle={{ color: '#cbd5e1' }}
+                />
+                <Legend wrapperStyle={{ color: '#cbd5e1' }} />
+                <Bar yAxisId="left" dataKey="value" fill="#3b82f6" />
+              </BarChart>
+            )}
+          </ResponsiveContainer>
+        </div>
       );
     };
     return (
@@ -745,7 +735,7 @@ const DOWIntradayTab: React.FC = () => {
             {xAxisLabel} | {yAxisLabel}: {chartData.reduce((sum, item) => sum + item.value, 0).toLocaleString()} total
           </p>
           <p className="text-sm text-gray-400">
-            Data Points: {chartData.length} | Range: {minVolume.toLocaleString()} - {maxVolume.toLocaleString()}
+            Data Points: {chartData.length} | Range: {minVolume.toLocaleString()} - {Math.max(...chartData.map(d => d.value)).toLocaleString()}
           </p>
         </div>
       </div>
@@ -898,13 +888,13 @@ const DOWIntradayTab: React.FC = () => {
       </div>
 
       {/* Aggregation Filters */}
-      {analysisType === 'intraday' && (
+      {analysisType === 'intraday' && activeView === 'chart' && (
         <div className="px-6 py-4 bg-slate-850 border-b border-slate-700">
           <div className="flex items-center space-x-4">
             <label className="text-sm text-gray-300 font-medium">Aggregation:</label>
             <select
               value={filters.aggregationType}
-              onChange={(e) => handleFilterChange('aggregationType', e.target.value)}
+              onChange={(e) => handleFilterChange('aggregationType', e.target.value as 'daily' | 'monthly' | 'yearly')}
               className="bg-slate-700 border border-slate-600 rounded px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="daily">Daily</option>
@@ -970,31 +960,29 @@ const DOWIntradayTab: React.FC = () => {
             )}
           </div>
 
-          {analysisType === 'intraday' && (
-            <div className="mt-4 flex items-center space-x-4">
-              <label className="text-sm text-gray-300 font-medium">Filter Hours:</label>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="range"
-                  min="0"
-                  max="24"
-                  value={filters.intradayFilters.start}
-                  onChange={(e) => handleFilterChange('intradayFilters', { ...filters.intradayFilters, start: parseInt(e.target.value) })}
-                  className="w-32"
-                />
-                <span>{filters.intradayFilters.start}:00</span>
-                <input
-                  type="range"
-                  min="0"
-                  max="24"
-                  value={filters.intradayFilters.end}
-                  onChange={(e) => handleFilterChange('intradayFilters', { ...filters.intradayFilters, end: parseInt(e.target.value) })}
-                  className="w-32"
-                />
-                <span>{filters.intradayFilters.end}:00</span>
-              </div>
+          <div className="mt-4 flex items-center space-x-4">
+            <label className="text-sm text-gray-300 font-medium">Filter Hours:</label>
+            <div className="flex items-center space-x-2">
+              <input
+                type="range"
+                min="0"
+                max="24"
+                value={filters.intradayFilters.start}
+                onChange={(e) => handleFilterChange('intradayFilters', { ...filters.intradayFilters, start: parseInt(e.target.value) })}
+                className="w-32"
+              />
+              <span>{filters.intradayFilters.start}:00</span>
+              <input
+                type="range"
+                min="0"
+                max="24"
+                value={filters.intradayFilters.end}
+                onChange={(e) => handleFilterChange('intradayFilters', { ...filters.intradayFilters, end: parseInt(e.target.value) })}
+                className="w-32"
+              />
+              <span>{filters.intradayFilters.end}:00</span>
             </div>
-          )}
+          </div>
         </div>
       )}
 
