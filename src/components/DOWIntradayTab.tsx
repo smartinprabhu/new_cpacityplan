@@ -440,43 +440,44 @@ const DOWIntradayTab: React.FC = () => {
     let chartData: { label: string; value: number; date?: string }[] = [];
     let xAxisLabel = '';
     let yAxisLabel = 'Volume';
+    let overallAverage = 0;
 
     switch (aggregationType) {
-      case 'halfhour':
+      case 'halfhour': // This will be displayed as "Intraday"
         chartData = filteredData.flatMap((dayData) =>
           dayData.halfHourData.map((volume, index) => {
             const hour = Math.floor(index / 2);
             const minute = (index % 2) * 30;
             const timeLabel = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-            const dateLabel = new Date(dayData.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-            return { label: `${dateLabel} ${timeLabel}`, value: volume || 0, date: dayData.date };
+            const dateLabel = new Date(dayData.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', weekday: 'short' });
+            return { label: `${dateLabel} ${timeLabel}`, value: volume || 0, date: `${dayData.date}T${timeLabel}` };
           })
         ).filter((d) => d.value !== null && d.value !== undefined);
-        xAxisLabel = 'Date & Time (Half-Hour Intervals)';
+        xAxisLabel = 'Date & Time';
         break;
 
       case 'hourly':
         const hourlyData: { [key: string]: number } = {};
         filteredData.forEach((dayData) => {
           for (let hour = 0; hour < 24; hour++) {
-            const hourKey = `${dayData.date}-${hour.toString().padStart(2, '0')}:00`;
+            const hourKey = `${dayData.date}T${hour.toString().padStart(2, '0')}:00`;
             const halfHour1 = dayData.halfHourData[hour * 2] || 0;
             const halfHour2 = dayData.halfHourData[hour * 2 + 1] || 0;
             hourlyData[hourKey] = halfHour1 + halfHour2;
           }
         });
         chartData = Object.entries(hourlyData).map(([key, value]) => {
-          const [date, time] = key.split('-');
-          const dateLabel = new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-          return { label: `${dateLabel} ${time}`, value: value || 0, date };
+          const [date, time] = key.split('T');
+          const dateLabel = new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', weekday: 'short' });
+          return { label: `${dateLabel} ${time}`, value: value || 0, date: key };
         }).filter((d) => d.value !== null && d.value !== undefined);
-        xAxisLabel = 'Date & Time (Hourly)';
+        xAxisLabel = 'Date & Time';
         break;
 
       case 'daily':
         chartData = filteredData.map((dayData) => {
           const totalVolume = dayData.halfHourData.reduce((sum, vol) => sum + (vol || 0), 0);
-          const dateLabel = new Date(dayData.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+          const dateLabel = new Date(dayData.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: '2-digit' });
           return { label: dateLabel, value: totalVolume, date: dayData.date };
         }).filter((d) => d.value !== null && d.value !== undefined);
         xAxisLabel = 'Date';
@@ -499,7 +500,7 @@ const DOWIntradayTab: React.FC = () => {
           const endDate = new Date(startDate);
           endDate.setDate(startDate.getDate() + 6);
           return {
-            label: `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
+            label: `Week ${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
             value: data.volume || 0,
             date: weekStart,
           };
@@ -519,7 +520,7 @@ const DOWIntradayTab: React.FC = () => {
         chartData = Object.entries(monthlyData).map(([monthKey, volume]) => {
           const [year, month] = monthKey.split('-');
           const date = new Date(parseInt(year), parseInt(month) - 1);
-          return { label: date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' }), value: volume || 0, date: monthKey };
+          return { label: date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' }), value: volume || 0, date: monthKey };
         }).filter((d) => d.value !== null && d.value !== undefined);
         xAxisLabel = 'Month';
         break;
@@ -532,41 +533,93 @@ const DOWIntradayTab: React.FC = () => {
     // Sort chart data by date
     chartData.sort((a, b) => (a.date && b.date ? new Date(a.date).getTime() - new Date(b.date).getTime() : 0));
 
+    // Calculate overall average
+    if (chartData.length > 0) {
+      const totalVolume = chartData.reduce((sum, item) => sum + item.value, 0);
+      overallAverage = totalVolume / chartData.length;
+    }
+
+    // Add overall average to each data point for the average line
+    const chartDataWithAverage = chartData.map(item => ({
+      ...item,
+      average: overallAverage
+    }));
+
     const minVolume = chartData.length > 0 ? Math.min(...chartData.map((d) => d.value)) : 0;
     const maxVolume = chartData.length > 0 ? Math.max(...chartData.map((d) => d.value)) : 0;
 
+    // Calculate dynamic width based on data points and aggregation type
+    const getChartWidth = () => {
+      const baseWidth = 800;
+      const minWidth = 1200;
+      const maxWidth = 3000;
+      
+      let pointWidth = 50;
+      if (aggregationType === 'halfhour') pointWidth = 30;
+      else if (aggregationType === 'hourly') pointWidth = 40;
+      else if (aggregationType === 'daily') pointWidth = 60;
+      else if (aggregationType === 'weekly') pointWidth = 100;
+      else if (aggregationType === 'monthly') pointWidth = 150;
+      
+      const calculatedWidth = Math.max(minWidth, chartData.length * pointWidth);
+      return Math.min(maxWidth, calculatedWidth);
+    };
     const renderChart = () => {
       if (!chartData.length) {
         return <div className="flex items-center justify-center h-96 text-gray-400">No data available for the selected filters</div>;
       }
 
+      const chartWidth = getChartWidth();
+      const showXAxisLabels = chartData.length <= 50; // Only show labels if not too many points
+      const labelInterval = Math.max(0, Math.floor(chartData.length / 15)); // Show max 15 labels
+
       return (
         <div style={{ width: '100%', overflowX: 'auto', overflowY: 'hidden' }}>
-          <ResponsiveContainer width={Math.min(chartData.length * 50, 2000)} height={400}>
+          <ResponsiveContainer width={chartWidth} height={450}>
             {chartType === 'line' ? (
-              <LineChart data={chartData}>
+              <LineChart data={chartDataWithAverage} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
                 <XAxis
                   dataKey="label"
                   stroke="#94a3b8"
-                  interval={Math.floor(chartData.length / 10) || 0}
+                  interval={labelInterval}
                   angle={-45}
                   textAnchor="end"
-                  height={100}
-                  label={{ value: xAxisLabel, position: 'insideBottom', offset: -5, fill: '#94a3b8' }}
+                  height={80}
+                  fontSize={12}
+                  tick={showXAxisLabels ? { fontSize: 11, fill: '#94a3b8' } : false}
                 />
                 <YAxis
                   stroke="#94a3b8"
                   yAxisId="left"
                   orientation="left"
+                  fontSize={12}
                   label={{ value: yAxisLabel, angle: -90, position: 'insideLeft', textAnchor: 'middle', fill: '#94a3b8' }}
                 />
                 <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569' }} labelStyle={{ color: '#cbd5e1' }} />
                 <Legend wrapperStyle={{ color: '#cbd5e1' }} />
-                <Line yAxisId="left" type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} />
+                <Line 
+                  yAxisId="left" 
+                  type="monotone" 
+                  dataKey="value" 
+                  stroke="#3b82f6" 
+                  strokeWidth={2} 
+                  dot={{ r: chartData.length > 100 ? 0 : 3 }} 
+                  name="Volume"
+                />
+                <Line 
+                  yAxisId="left" 
+                  type="monotone" 
+                  dataKey="average" 
+                  stroke="#ef4444" 
+                  strokeWidth={2} 
+                  strokeDasharray="5 5"
+                  dot={false}
+                  name={`Overall Average (${Math.round(overallAverage).toLocaleString()})`}
+                />
               </LineChart>
             ) : chartType === 'area' ? (
-              <AreaChart data={chartData}>
+              <AreaChart data={chartDataWithAverage} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
                 <defs>
                   <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
@@ -577,43 +630,75 @@ const DOWIntradayTab: React.FC = () => {
                 <XAxis
                   dataKey="label"
                   stroke="#94a3b8"
-                  interval={Math.floor(chartData.length / 10) || 0}
+                  interval={labelInterval}
                   angle={-45}
                   textAnchor="end"
-                  height={100}
-                  label={{ value: xAxisLabel, position: 'insideBottom', offset: -5, fill: '#94a3b8' }}
+                  height={80}
+                  fontSize={12}
+                  tick={showXAxisLabels ? { fontSize: 11, fill: '#94a3b8' } : false}
                 />
                 <YAxis
                   stroke="#94a3b8"
                   yAxisId="left"
                   orientation="left"
+                  fontSize={12}
                   label={{ value: yAxisLabel, angle: -90, position: 'insideLeft', textAnchor: 'middle', fill: '#94a3b8' }}
                 />
                 <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569' }} labelStyle={{ color: '#cbd5e1' }} />
                 <Legend wrapperStyle={{ color: '#cbd5e1' }} />
-                <Area yAxisId="left" type="monotone" dataKey="value" stroke="#3b82f6" fillOpacity={1} fill="url(#areaGradient)" />
+                <Area 
+                  yAxisId="left" 
+                  type="monotone" 
+                  dataKey="value" 
+                  stroke="#3b82f6" 
+                  fillOpacity={1} 
+                  fill="url(#areaGradient)"
+                  name="Volume"
+                />
+                <Line 
+                  yAxisId="left" 
+                  type="monotone" 
+                  dataKey="average" 
+                  stroke="#ef4444" 
+                  strokeWidth={2} 
+                  strokeDasharray="5 5"
+                  dot={false}
+                  name={`Overall Average (${Math.round(overallAverage).toLocaleString()})`}
+                />
               </AreaChart>
             ) : (
-              <BarChart data={chartData}>
+              <BarChart data={chartDataWithAverage} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
                 <XAxis
                   dataKey="label"
                   stroke="#94a3b8"
-                  interval={Math.floor(chartData.length / 10) || 0}
+                  interval={labelInterval}
                   angle={-45}
                   textAnchor="end"
-                  height={100}
-                  label={{ value: xAxisLabel, position: 'insideBottom', offset: -5, fill: '#94a3b8' }}
+                  height={80}
+                  fontSize={12}
+                  tick={showXAxisLabels ? { fontSize: 11, fill: '#94a3b8' } : false}
                 />
                 <YAxis
                   stroke="#94a3b8"
                   yAxisId="left"
                   orientation="left"
+                  fontSize={12}
                   label={{ value: yAxisLabel, angle: -90, position: 'insideLeft', textAnchor: 'middle', fill: '#94a3b8' }}
                 />
                 <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569' }} labelStyle={{ color: '#cbd5e1' }} />
                 <Legend wrapperStyle={{ color: '#cbd5e1' }} />
-                <Bar yAxisId="left" dataKey="value" fill="#3b82f6" />
+                <Bar yAxisId="left" dataKey="value" fill="#3b82f6" name="Volume" />
+                <Line 
+                  yAxisId="left" 
+                  type="monotone" 
+                  dataKey="average" 
+                  stroke="#ef4444" 
+                  strokeWidth={2} 
+                  strokeDasharray="5 5"
+                  dot={false}
+                  name={`Overall Average (${Math.round(overallAverage).toLocaleString()})`}
+                />
               </BarChart>
             )}
           </ResponsiveContainer>
@@ -628,7 +713,7 @@ const DOWIntradayTab: React.FC = () => {
             <div>
               <h3 className="text-lg font-semibold text-white mb-2">
                 {aggregationType === 'halfhour'
-                  ? 'Half-Hour Volume Distribution'
+                  ? 'Intraday Volume Distribution'
                   : aggregationType === 'hourly'
                   ? 'Hourly Volume Distribution'
                   : aggregationType === 'daily'
@@ -640,6 +725,7 @@ const DOWIntradayTab: React.FC = () => {
               <p className="text-sm text-gray-400">
                 LOB: {filters.lineOfBusiness} | {weekInfo.startWeek} - {weekInfo.endWeek}
                 {filters.selectedDOW && ` | Filtered: ${filters.selectedDOW}`}
+                {overallAverage > 0 && ` | Avg: ${Math.round(overallAverage).toLocaleString()}`}
               </p>
             </div>
             <div className="flex items-center space-x-4">
@@ -664,7 +750,7 @@ const DOWIntradayTab: React.FC = () => {
                   }
                   className="bg-slate-600 border border-slate-500 rounded px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="halfhour">Half-Hour</option>
+                  <option value="halfhour">Intraday</option>
                   <option value="hourly">Hourly</option>
                   <option value="daily">Daily</option>
                   <option value="weekly">Weekly</option>
@@ -678,10 +764,10 @@ const DOWIntradayTab: React.FC = () => {
         {chartData.length > 0 && (
           <div className="mt-4 flex items-center justify-between text-sm text-gray-400">
             <p>
-              {xAxisLabel} | {yAxisLabel}: {chartData.reduce((sum, item) => sum + item.value, 0).toLocaleString()} total
+              {xAxisLabel} | Total {yAxisLabel}: {chartData.reduce((sum, item) => sum + item.value, 0).toLocaleString()}
             </p>
             <p>
-              Data Points: {chartData.length} | Range: {minVolume.toLocaleString()} - {maxVolume.toLocaleString()}
+              Data Points: {chartData.length} | Range: {minVolume.toLocaleString()} - {maxVolume.toLocaleString()} | Avg: {Math.round(overallAverage).toLocaleString()}
             </p>
           </div>
         )}
@@ -818,100 +904,6 @@ const DOWIntradayTab: React.FC = () => {
           </div>
         </div>
       </div>
-      {analysisType === 'intraday' && activeView === 'chart' && (
-        <div className="px-6 py-4 bg-slate-850 border-b border-slate-700">
-          <div className="flex items-center space-x-4">
-            <label className="text-sm text-gray-300 font-medium">Aggregation:</label>
-            <select
-              value={filters.aggregationType}
-              onChange={(e) => handleFilterChange('aggregationType', e.target.value as 'daily' | 'monthly' | 'yearly')}
-              className="bg-slate-700 border border-slate-600 rounded px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="daily">Daily</option>
-              <option value="monthly">Monthly</option>
-              <option value="yearly">Yearly</option>
-            </select>
-            {filters.aggregationType === 'daily' && (
-              <div className="flex items-center space-x-2">
-                {daysOfWeek.map((day) => (
-                  <label key={day} className="flex items-center space-x-1 text-sm text-gray-300">
-                    <input
-                      type="checkbox"
-                      checked={filters.dailyFilters.includes(day)}
-                      onChange={() => {
-                        const newFilters = filters.dailyFilters.includes(day)
-                          ? filters.dailyFilters.filter((d) => d !== day)
-                          : [...filters.dailyFilters, day];
-                        handleFilterChange('dailyFilters', newFilters);
-                      }}
-                      className="form-checkbox h-4 w-4 bg-slate-600 border-slate-500 text-blue-500 focus:ring-blue-500"
-                    />
-                    <span>{day.slice(0, 3)}</span>
-                  </label>
-                ))}
-              </div>
-            )}
-            {filters.aggregationType === 'monthly' && (
-              <div className="flex items-center space-x-2">
-                {Array.from({ length: 12 }, (_, i) => new Date(0, i).toLocaleString('en-US', { month: 'long' })).map((month) => (
-                  <label key={month} className="flex items-center space-x-1 text-sm text-gray-300">
-                    <input
-                      type="checkbox"
-                      checked={filters.monthlyFilters.includes(month)}
-                      onChange={() => {
-                        const newFilters = filters.monthlyFilters.includes(month)
-                          ? filters.monthlyFilters.filter((m) => m !== month)
-                          : [...filters.monthlyFilters, month];
-                        handleFilterChange('monthlyFilters', newFilters);
-                      }}
-                      className="form-checkbox h-4 w-4 bg-slate-600 border-slate-500 text-blue-500 focus:ring-blue-500"
-                    />
-                    <span>{month.slice(0, 3)}</span>
-                  </label>
-                ))}
-              </div>
-            )}
-            {filters.aggregationType === 'yearly' && (
-              <div className="flex items-center space-x-2">
-                <select
-                  value={filters.yearlyFilters[0] || ''}
-                  onChange={(e) => handleFilterChange('yearlyFilters', [parseInt(e.target.value)])}
-                  className="bg-slate-700 border border-slate-600 rounded px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {Array.from(new Set(datesInRange.map((d) => new Date(d.date).getFullYear()))).map((year) => (
-                    <option key={year} value={year}>
-                      {year}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-          </div>
-          <div className="mt-4 flex items-center space-x-4">
-            <label className="text-sm text-gray-300 font-medium">Filter Hours:</label>
-            <div className="flex items-center space-x-2">
-              <input
-                type="range"
-                min="0"
-                max="24"
-                value={filters.intradayFilters.start}
-                onChange={(e) => handleFilterChange('intradayFilters', { ...filters.intradayFilters, start: parseInt(e.target.value) })}
-                className="w-32"
-              />
-              <span>{filters.intradayFilters.start}:00</span>
-              <input
-                type="range"
-                min="0"
-                max="24"
-                value={filters.intradayFilters.end}
-                onChange={(e) => handleFilterChange('intradayFilters', { ...filters.intradayFilters, end: parseInt(e.target.value) })}
-                className="w-32"
-              />
-              <span>{filters.intradayFilters.end}:00</span>
-            </div>
-          </div>
-        </div>
-      )}
       <div className="p-6">
         {analysisType === 'dow' ? activeView === 'table' ? renderDOWTableView() : renderDOWChartView() : activeView === 'table' ? renderIntradayTableView() : renderIntradayChartView()}
       </div>
