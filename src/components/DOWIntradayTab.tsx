@@ -438,6 +438,22 @@ const DOWIntradayTab: React.FC = () => {
   const renderIntradayChartView = () => {
     const filteredData = generateIntradayData.filter((item) => !filters.selectedDOW || item.dow === filters.selectedDOW);
     let chartData: { label: string; value: number; date?: string }[] = [];
+    // Calculate chart width based on aggregation type and data length
+    const getChartWidth = () => {
+      const baseWidth = {
+        'half-hour': 30,
+        'hourly': 40,
+        'daily': 60,
+        'weekly': 100,
+        'monthly': 150
+      };
+      
+      const width = chartData.length * (baseWidth[aggregationType] || 30);
+      return Math.max(1200, Math.min(3000, width));
+    };
+    
+    const chartWidth = getChartWidth();
+    
     let xAxisLabel = '';
     let yAxisLabel = 'Volume';
     let overallAverage = 0;
