@@ -760,7 +760,198 @@ const DOWIntradayTab: React.FC = () => {
             </div>
           </div>
         </div>
-        <div className="bg-slate-800 p-4 rounded-lg">{renderChart()}</div>
+        
+        {/* Fixed Legend */}
+        <div className="mb-4 bg-slate-800 p-3 rounded-lg">
+          <div className="flex items-center justify-center space-x-6">
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-0.5 bg-blue-500"></div>
+              <span className="text-sm text-gray-300">Volume</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-0.5 bg-red-500 border-dashed border-t-2 border-red-500"></div>
+              <span className="text-sm text-gray-300">
+                Overall Average ({Math.round(overallAverage).toLocaleString()})
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Chart Container with Fixed Y-Axis */}
+        <div className="bg-slate-800 rounded-lg overflow-hidden">
+          <div className="flex">
+            {/* Fixed Y-Axis Container */}
+            <div className="flex-shrink-0 bg-slate-800 border-r border-slate-600">
+              <div style={{ width: '80px', height: '450px' }} className="relative">
+                <ResponsiveContainer width="100%" height="100%">
+                  {chartType === 'line' ? (
+                    <LineChart data={[]} margin={{ top: 20, right: 0, left: 20, bottom: 60 }}>
+                      <YAxis
+                        stroke="#94a3b8"
+                        fontSize={12}
+                        domain={[
+                          Math.max(0, Math.floor(minVolume * 0.9)),
+                          Math.ceil(maxVolume * 1.1)
+                        ]}
+                        label={{ 
+                          value: yAxisLabel, 
+                          angle: -90, 
+                          position: 'insideLeft', 
+                          textAnchor: 'middle', 
+                          fill: '#94a3b8' 
+                        }}
+                      />
+                    </LineChart>
+                  ) : chartType === 'area' ? (
+                    <AreaChart data={[]} margin={{ top: 20, right: 0, left: 20, bottom: 60 }}>
+                      <YAxis
+                        stroke="#94a3b8"
+                        fontSize={12}
+                        domain={[
+                          Math.max(0, Math.floor(minVolume * 0.9)),
+                          Math.ceil(maxVolume * 1.1)
+                        ]}
+                        label={{ 
+                          value: yAxisLabel, 
+                          angle: -90, 
+                          position: 'insideLeft', 
+                          textAnchor: 'middle', 
+                          fill: '#94a3b8' 
+                        }}
+                      />
+                    </AreaChart>
+                  ) : (
+                    <BarChart data={[]} margin={{ top: 20, right: 0, left: 20, bottom: 60 }}>
+                      <YAxis
+                        stroke="#94a3b8"
+                        fontSize={12}
+                        domain={[
+                          Math.max(0, Math.floor(minVolume * 0.9)),
+                          Math.ceil(maxVolume * 1.1)
+                        ]}
+                        label={{ 
+                          value: yAxisLabel, 
+                          angle: -90, 
+                          position: 'insideLeft', 
+                          textAnchor: 'middle', 
+                          fill: '#94a3b8' 
+                        }}
+                      />
+                    </BarChart>
+                  )}
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Scrollable Chart Area */}
+            <div className="flex-1 overflow-x-auto">
+              <div style={{ width: chartWidth - 80 }}>
+                <ResponsiveContainer width="100%" height={450}>
+                  {chartType === 'line' ? (
+                    <LineChart data={chartDataWithAverage} margin={{ top: 20, right: 30, left: 0, bottom: 60 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
+                      <XAxis
+                        dataKey="label"
+                        stroke="#94a3b8"
+                        interval={labelInterval}
+                        angle={-45}
+                        textAnchor="end"
+                        height={80}
+                        fontSize={12}
+                        tick={showXAxisLabels ? { fontSize: 11, fill: '#94a3b8' } : false}
+                      />
+                      <YAxis hide />
+                      <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569' }} labelStyle={{ color: '#cbd5e1' }} />
+                      <Line 
+                        type="monotone" 
+                        dataKey="value" 
+                        stroke="#3b82f6" 
+                        strokeWidth={2} 
+                        dot={{ r: chartData.length > 100 ? 0 : 3 }} 
+                        name="Volume"
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="average" 
+                        stroke="#ef4444" 
+                        strokeWidth={2} 
+                        strokeDasharray="5 5"
+                        dot={false}
+                        name={`Overall Average (${Math.round(overallAverage).toLocaleString()})`}
+                      />
+                    </LineChart>
+                  ) : chartType === 'area' ? (
+                    <AreaChart data={chartDataWithAverage} margin={{ top: 20, right: 30, left: 0, bottom: 60 }}>
+                      <defs>
+                        <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
+                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
+                      <XAxis
+                        dataKey="label"
+                        stroke="#94a3b8"
+                        interval={labelInterval}
+                        angle={-45}
+                        textAnchor="end"
+                        height={80}
+                        fontSize={12}
+                        tick={showXAxisLabels ? { fontSize: 11, fill: '#94a3b8' } : false}
+                      />
+                      <YAxis hide />
+                      <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569' }} labelStyle={{ color: '#cbd5e1' }} />
+                      <Area 
+                        type="monotone" 
+                        dataKey="value" 
+                        stroke="#3b82f6" 
+                        fillOpacity={1} 
+                        fill="url(#areaGradient)"
+                        name="Volume"
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="average" 
+                        stroke="#ef4444" 
+                        strokeWidth={2} 
+                        strokeDasharray="5 5"
+                        dot={false}
+                        name={`Overall Average (${Math.round(overallAverage).toLocaleString()})`}
+                      />
+                    </AreaChart>
+                  ) : (
+                    <BarChart data={chartDataWithAverage} margin={{ top: 20, right: 30, left: 0, bottom: 60 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#475569" />
+                      <XAxis
+                        dataKey="label"
+                        stroke="#94a3b8"
+                        interval={labelInterval}
+                        angle={-45}
+                        textAnchor="end"
+                        height={80}
+                        fontSize={12}
+                        tick={showXAxisLabels ? { fontSize: 11, fill: '#94a3b8' } : false}
+                      />
+                      <YAxis hide />
+                      <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569' }} labelStyle={{ color: '#cbd5e1' }} />
+                      <Bar dataKey="value" fill="#3b82f6" name="Volume" />
+                      <Line 
+                        type="monotone" 
+                        dataKey="average" 
+                        stroke="#ef4444" 
+                        strokeWidth={2} 
+                        strokeDasharray="5 5"
+                        dot={false}
+                        name={`Overall Average (${Math.round(overallAverage).toLocaleString()})`}
+                      />
+                    </BarChart>
+                  )}
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        </div>
+        
         {chartData.length > 0 && (
           <div className="mt-4 flex items-center justify-between text-sm text-gray-400">
             <p>
